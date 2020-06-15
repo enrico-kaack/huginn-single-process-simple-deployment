@@ -1,0 +1,51 @@
+version: '2'
+
+services:
+  postgres:
+    image: postgres:9.5
+    restart: always
+    env_file:
+      - postgres.env
+    networks:
+      - internal
+
+  web:
+    image: huginn/huginn-single-process
+    restart: always
+    ports:
+      - "3000:3000"
+    env_file:
+      - postgres.env
+      - secrets.env
+    depends_on:
+      - postgres
+    networks: 
+      - internal
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.huginn.rule=Host(`host.example.de`)"
+      - "traefik.http.routers.huginn.entrypoints=websecure"
+      - "traefik.docker.network=web"
+      - "traefik.http.routers.huginn.tls=true"
+      - "traefik.http.routers.huginn.tls.certresolver=leresolver"
+      - "traeffik.port=3000"
+
+
+  threaded:
+    image: huginn/huginn-single-process
+    command: /scripts/init bin/threaded.rb
+    restart: always
+    env_file:
+      - postgres.env
+      - secrets.env
+    depends_on:
+      - postgres
+      - web
+    networks: 
+      - internal
+
+networks:
+  internal:
+  web:
+    external: true
